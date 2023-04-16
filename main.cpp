@@ -92,17 +92,17 @@ int main() {
 
 float pos(struct Engine* e) {
     float t = e->clock.getElapsedTime().asMilliseconds() / 1000.f;
-    return (e->Xmax * 50) * cosf(e->omega * t + e->phi);
+    return (((e->Xmax > 4) ? 4 : e->Xmax) * 50) * cosf(e->omega * t + e->phi);
 }
 
 float vel(struct Engine* e) {
     float t = e->clock.getElapsedTime().asMilliseconds() / 1000.f;
-    return - e->omega * (e->Xmax * 50) * sinf(e->omega * t + e->phi);
+    return - e->omega * (((e->Xmax > 4) ? 4 : e->Xmax) * 50) * sinf(e->omega * t + e->phi);
 }
 
 float acc(struct Engine* e) {
     float t = e->clock.getElapsedTime().asMilliseconds() / 1000.f;
-    return e->omega * e->omega * (e->Xmax * 50) * cosf(e->omega * t + e->phi);
+    return e->omega * e->omega * (((e->Xmax > 4) ? 4 : e->Xmax) * 50) * cosf(e->omega * t + e->phi);
 }
 
 float calcOmega(struct Engine* e) {
