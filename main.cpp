@@ -142,8 +142,8 @@ void setPeriod(struct Engine* e, float period) {
 void initEngine(struct Engine* e) {
     e->k = 1;
     e->mass = 1;
-    e->Xmax = 50;
-    e->phi = 0;
+    e->Xmax = 1;
+    e->phi = -PI/2;
     setPeriod(e, 1);
 }
 
@@ -218,7 +218,7 @@ void initHud(struct Engine* e, struct Graphic* g) {
     bar->setFont(g->cascadia);
     bar->setFillColor(sf::Color::White);
     bar->setCharacterSize(20);
-    bar->setPosition(840, 365);
+    bar->setPosition(860, 350);
     g->hud.push_back(bar);
 
     std::string s = std::to_string(e->Xmax);
@@ -334,7 +334,7 @@ void initHud(struct Engine* e, struct Graphic* g) {
 void shiftGraph(struct Graphic* g) {
     int lim = g->graph.size();
     for (std::list<sf::CircleShape*>::iterator it = g->graph.begin(); it != g->graph.end(); it++) {
-        (*it)->move(-2, 0);
+        (*it)->move(-5, 0); // -2
         if ((*it)->getPosition().x < -5) {
             delete *it;
             g->graph.erase(it);
@@ -353,7 +353,7 @@ void updateValues(struct Engine* e, struct Graphic* g) {
     std::string s = std::to_string(x(e));
     s = s.substr(0, s.find('.') + 3);
     g->hud[0]->setString(s);
-    g->hud[0]->setPosition(840, 350 - pos(e));
+    g->hud[0]->setPosition(860, 350 - pos(e));
     g->hud[9]->setString("x(t): " + s + " m");
 
     unsigned int total = e->clock.getElapsedTime().asSeconds();
