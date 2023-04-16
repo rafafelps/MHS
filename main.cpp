@@ -2,6 +2,7 @@
 #include <iostream>
 #include <cmath>
 #include <vector>
+#include <list>
 
 #define PI 3.14159265
 
@@ -23,7 +24,10 @@ float calcOmega(struct Engine* e);
 float calcPeriod(struct Engine* e);
 void setPeriod(struct Engine* e, float period);
 void initSpring(std::vector<sf::RectangleShape*>* drawables);
-void render(sf::RenderWindow* window, std::vector<sf::RectangleShape*>* drawables);
+void initAxis(std::vector<sf::RectangleShape*>* drawables);
+void shiftGraph(std::list<sf::CircleShape*>* graph);
+void graphPoint(std::list<sf::CircleShape*>* graph, float y);
+void render(sf::RenderWindow* window, std::vector<sf::RectangleShape*>* drawables, std::list<sf::CircleShape*>* graph);
 
 int main() {
     double aspect_ratio = 16.0 / 9;
@@ -31,31 +35,25 @@ int main() {
     int height = int(width / aspect_ratio);
     sf::RenderWindow window(sf::VideoMode(width, height), "Simple Harmonic Motion");
     std::vector<sf::RectangleShape*> drawables;
+    std::list<sf::CircleShape*> graph;
 
     struct Engine e;
     e.mass = 1;
     e.k = 1;
-    setPeriod(&e, 10);
-    e.Xmax = 50;
-    e.phi = -PI/2;
+    setPeriod(&e, 0.5);
+    e.Xmax = 4;
+    e.phi = 0;
 
     initSpring(&drawables);
-
-    sf::RectangleShape line(sf::Vector2f(0.6f*width, 5));
-    line.setOrigin(0.6f*width/2,2);
-    line.setFillColor(sf::Color(255,0,0));
-    line.setPosition(width/2, height/2);
-    drawables.push_back(&line);
+    initAxis(&drawables);
 
     double dt = 1.f/60.f; // Modify this to change physics rate.
     double accumulator = 0.f;
     sf::Clock clock;
-    sf::Clock engineClock;
+    sf::Clock fpsClk;
     bool drawn = false;
     unsigned int fps = 0;
 
-    //circle.move(sf::Vector2f(380, 0));
-    sf::Clock fpsClk;
     while (window.isOpen()) {
         sf::Event event;
         while (window.pollEvent(event)) {
@@ -67,10 +65,13 @@ int main() {
         clock.restart();
         if (accumulator >= dt) {
             // Physics and stuff
-            float t = engineClock.getElapsedTime().asMilliseconds()/1000.f;
-            //std::cout << pos(50, 4 * PI, -PI/2, t) << std::endl;
-            //drawables[1]->setSize(sf::Vector2f(94, 481 + pos(&e)));
+
+            //drawables[1]->setSize(sf::Vector2f(94, 216 + pos(&e)));
+            //e.clock.restart();
+            drawables[1]->setSize(sf::Vector2f(drawables[1]->getSize().x, 216 - pos(&e)));
+            drawables[2]->setPosition(drawables[2]->getPosition().x, 360 - pos(&e));
             
+            graphPoint(&graph, drawables[2]->getPosition().y);
 
             accumulator = 0;
             drawn = false;
@@ -78,7 +79,8 @@ int main() {
 
         if (!drawn) {
             fps++;
-            render(&window, &drawables);
+            render(&window, &drawables, &graph);
+            shiftGraph(&graph);
             drawn = true;
         }
 
@@ -95,17 +97,17 @@ int main() {
 
 float pos(struct Engine* e) {
     float t = e->clock.getElapsedTime().asMilliseconds() / 1000.f;
-    return e->Xmax * cosf(e->omega * t + e->phi);
+    return (e->Xmax * 50) * cosf(e->omega * t + e->phi);
 }
 
 float vel(struct Engine* e) {
     float t = e->clock.getElapsedTime().asMilliseconds() / 1000.f;
-    return - e->omega * e->Xmax * sinf(e->omega * t + e->phi);
+    return - e->omega * (e->Xmax * 50) * sinf(e->omega * t + e->phi);
 }
 
 float acc(struct Engine* e) {
     float t = e->clock.getElapsedTime().asMilliseconds() / 1000.f;
-    return e->omega * e->omega * e->Xmax * cosf(e->omega * t + e->phi);
+    return e->omega * e->omega * (e->Xmax * 50) * cosf(e->omega * t + e->phi);
 }
 
 float calcOmega(struct Engine* e) {
@@ -131,7 +133,7 @@ void initSpring(std::vector<sf::RectangleShape*>* drawables) {
 
     sf::Texture* texture = new sf::Texture;
     texture->loadFromFile("spring.png");
-    sf::RectangleShape* spring = new sf::RectangleShape(sf::Vector2f(94, 481));
+    sf::RectangleShape* spring = new sf::RectangleShape(sf::Vector2f(94, 216)); // 481
     spring->setTexture(texture);
     spring->setOrigin(94/2-~(94&0x01), 0);
     spring->setPosition(997, 72);
@@ -142,14 +144,88 @@ void initSpring(std::vector<sf::RectangleShape*>* drawables) {
     box->setOutlineThickness(5);
     box->setOutlineColor(sf::Color(255, 247, 238, 220));
     box->setOrigin(134/2-~(134&0x01), 134/2-~(134&0x01));
-    box->setPosition(997, 625);
+    box->setPosition(997, 360);
     drawables->push_back(box);
 }
 
-void render(sf::RenderWindow* window, std::vector<sf::RectangleShape*>* drawables) {
+void initAxis(std::vector<sf::RectangleShape*>* drawables) {
+    sf::RectangleShape* timeAxis = new sf::RectangleShape(sf::Vector2f(860, 5));
+    timeAxis->setFillColor(sf::Color(220, 213, 205));
+    timeAxis->setPosition(0, 720/2);
+    drawables->push_back(timeAxis);
+    sf::RectangleShape* upArrow = new sf::RectangleShape(sf::Vector2f(15, 5));
+    upArrow->setFillColor(sf::Color(220, 213, 205));
+    upArrow->setPosition(859, 364);
+    upArrow->setOrigin(14, 4);
+    upArrow->rotate(45);
+    drawables->push_back(upArrow);
+    sf::RectangleShape* dwnArrow = new sf::RectangleShape(sf::Vector2f(15, 5));
+    dwnArrow->setFillColor(sf::Color(220, 213, 205));
+    dwnArrow->setPosition(859, 360);
+    dwnArrow->setOrigin(14, 0);
+    dwnArrow->rotate(-45);
+    drawables->push_back(dwnArrow);
+
+    sf::RectangleShape* posAxis = new sf::RectangleShape(sf::Vector2f(5, 558));
+    posAxis->setFillColor(sf::Color(220, 213, 205));
+    posAxis->setPosition(800, 80);
+    drawables->push_back(posAxis);
+    sf::RectangleShape* lftArrow = new sf::RectangleShape(sf::Vector2f(5, 15));
+    lftArrow->setFillColor(sf::Color(220, 213, 205));
+    lftArrow->setPosition(803, 77);
+    lftArrow->rotate(45);
+    drawables->push_back(lftArrow);
+    sf::RectangleShape* rgtArrow = new sf::RectangleShape(sf::Vector2f(5, 15));
+    rgtArrow->setFillColor(sf::Color(220, 213, 205));
+    rgtArrow->setPosition(799, 81);
+    rgtArrow->rotate(-45);
+    drawables->push_back(rgtArrow);
+}
+
+void shiftGraph(std::list<sf::CircleShape*>* graph) {
+    int lim = graph->size();
+    for (std::list<sf::CircleShape*>::iterator it = graph->begin(); it != graph->end(); it++) {
+        (*it)->move(-2, 0);
+        if ((*it)->getPosition().x < -5) {
+            delete *it;
+            graph->erase(it);
+        }
+    }
+}
+
+void graphPoint(std::list<sf::CircleShape*>* graph, float y) {
+    sf::CircleShape* p = new sf::CircleShape(2.5);
+    p->setFillColor(sf::Color(0, 148, 255));
+    p->setPosition(800, y);
+    graph->push_back(p);
+}
+
+void render(sf::RenderWindow* window, std::vector<sf::RectangleShape*>* drawables, std::list<sf::CircleShape*>* graph) {
     window->clear();
-    for (int i = 0; i < drawables->size(); i++) {
+
+    int lim = drawables->size();
+    for (int i = 0; i < lim; i++) {
         window->draw(*(*drawables)[i]);
+    }
+
+    //TODO: segmento de reta entre it e it+1
+    std::list<sf::CircleShape*>::iterator it2 = graph->begin();
+    it2++;
+    for (std::list<sf::CircleShape*>::iterator it = graph->begin(); it != graph->end(); it++, it2++) {
+        if (it2 == graph->end()) { continue; }
+
+        window->draw(**it);
+        float dx = (*it2)->getPosition().x - (*it)->getPosition().x;
+        float dy = (*it2)->getPosition().y - (*it)->getPosition().y;
+        float dist = sqrtf((dx*dx) + (dy * dy));
+        float angle = atan2f(dy,dx) * 180 / PI;
+
+        sf::RectangleShape bridge(sf::Vector2f(dist, 5));
+        bridge.setPosition((*it)->getPosition().x + 2.5, (*it)->getPosition().y);
+        bridge.setFillColor(sf::Color(0, 148, 255));
+        bridge.setOrigin(0, 2.5);
+        bridge.setRotation(angle);
+        window->draw(bridge);
     }
 
     window->display();
