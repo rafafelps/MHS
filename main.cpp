@@ -76,6 +76,8 @@ int main() {
             g.drawables[2]->setPosition(g.drawables[2]->getPosition().x, 360 - pos(&e));
             g.drawables[9]->setPosition(g.drawables[9]->getPosition().x, 362 - pos(&e));
 
+            // TODO: adionar barras de tempo
+
             // xₘ
             // ω
             // ϕ
@@ -144,7 +146,7 @@ void setPeriod(struct Engine* e, float period) {
 void initEngine(struct Engine* e) {
     e->k = 1;
     e->mass = 1;
-    e->Xmax = 1;
+    e->Xmax = 50;
     e->phi = 0;
     setPeriod(e, 1);
 }
@@ -223,6 +225,8 @@ void initHud(struct Graphic* g) {
     bar->setCharacterSize(20);
     bar->setPosition(840, 365);
     g->hud.push_back(bar);
+
+    // TODO: adionar o resto do layout
 }
 
 void shiftGraph(struct Graphic* g) {
