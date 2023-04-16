@@ -142,7 +142,7 @@ void setPeriod(struct Engine* e, float period) {
 void initEngine(struct Engine* e) {
     e->k = 1;
     e->mass = 1;
-    e->Xmax = 1;
+    e->Xmax = 50;
     e->phi = -PI/2;
     setPeriod(e, 1);
 }
@@ -392,20 +392,19 @@ void render(sf::RenderWindow* window, struct Graphic* g) {
     std::list<sf::CircleShape*>::iterator it2 = g->graph.begin();
     it2++;
     for (std::list<sf::CircleShape*>::iterator it = g->graph.begin(); it != g->graph.end(); it++, it2++) {
-        if (it2 == g->graph.end()) { continue; }
-
+        if (it2 != g->graph.end()) {
+            float dx = (*it2)->getPosition().x - (*it)->getPosition().x;
+            float dy = (*it2)->getPosition().y - (*it)->getPosition().y;
+            float dist = sqrtf((dx*dx) + (dy * dy));
+            float angle = atan2f(dy,dx) * 180 / PI;
+            sf::RectangleShape bridge(sf::Vector2f(dist, 5));
+            bridge.setPosition((*it)->getPosition().x + 2.5, (*it)->getPosition().y+2.5);
+            bridge.setFillColor(sf::Color(0, 148, 255));
+            bridge.setOrigin(0, 2.5);
+            bridge.setRotation(angle);
+            window->draw(bridge);
+        }
         window->draw(**it);
-        float dx = (*it2)->getPosition().x - (*it)->getPosition().x;
-        float dy = (*it2)->getPosition().y - (*it)->getPosition().y;
-        float dist = sqrtf((dx*dx) + (dy * dy));
-        float angle = atan2f(dy,dx) * 180 / PI;
-
-        sf::RectangleShape bridge(sf::Vector2f(dist, 5));
-        bridge.setPosition((*it)->getPosition().x + 2.5, (*it)->getPosition().y);
-        bridge.setFillColor(sf::Color(0, 148, 255));
-        bridge.setOrigin(0, 2.5);
-        bridge.setRotation(angle);
-        window->draw(bridge);
     }
 
     lim = g->hud.size();
