@@ -10,37 +10,41 @@ struct Engine {
     float k;
     float omega;
     float Xmax;
+    float period;
+    float phi;
+    sf::Clock clock;
 };
 
-float pos(float Xmax, float omega, float phi, float t);
-float vel(float Xmax, float omega, float phi, float t);
-float acc(float Xmax, float omega, float phi, float t);
-float calcOmega(float k, float mass);
-float calcPeriod(float k, float mass);
-void render(sf::RenderWindow* window, std::vector<sf::Drawable*>* drawables);
+
+float pos(struct Engine* e);
+float vel(struct Engine* e);
+float acc(struct Engine* e);
+float calcOmega(struct Engine* e);
+float calcPeriod(struct Engine* e);
+void setPeriod(struct Engine* e, float period);
+void initSpring(std::vector<sf::RectangleShape*>* drawables);
+void render(sf::RenderWindow* window, std::vector<sf::RectangleShape*>* drawables);
 
 int main() {
     double aspect_ratio = 16.0 / 9;
     int width = 1280;
     int height = int(width / aspect_ratio);
     sf::RenderWindow window(sf::VideoMode(width, height), "Simple Harmonic Motion");
+    std::vector<sf::RectangleShape*> drawables;
 
-    Engine e;
+    struct Engine e;
     e.mass = 1;
     e.k = 1;
-    float omega = 1;
-    e.Xmax = 1;
+    setPeriod(&e, 10);
+    e.Xmax = 50;
+    e.phi = -PI/2;
 
-    std::vector<sf::Drawable*> drawables;
-    sf::CircleShape circle(20);
-    circle.setFillColor(sf::Color(0, 148, 255));
-    circle.setOrigin(19, 19);
-    circle.setPosition(width/2, height/2);
+    initSpring(&drawables);
+
     sf::RectangleShape line(sf::Vector2f(0.6f*width, 5));
     line.setOrigin(0.6f*width/2,2);
     line.setFillColor(sf::Color(255,0,0));
     line.setPosition(width/2, height/2);
-    drawables.push_back(&circle);
     drawables.push_back(&line);
 
     double dt = 1.f/60.f; // Modify this to change physics rate.
@@ -64,9 +68,10 @@ int main() {
         if (accumulator >= dt) {
             // Physics and stuff
             float t = engineClock.getElapsedTime().asMilliseconds()/1000.f;
-            circle.setPosition(width/2 + pos(0.6f*width/2, 100, 90, t),height/2);
-            //circle.setPosition(cosf(engineClock.getElapsedTime().asMilliseconds()/1000.f), 0);
-            // pos(e.Xmax, e.omega, 0, engineClock.getElapsedTime().asMilliseconds()/1000.f)
+            //std::cout << pos(50, 4 * PI, -PI/2, t) << std::endl;
+            //drawables[1]->setSize(sf::Vector2f(94, 481 + pos(&e)));
+            
+
             accumulator = 0;
             drawn = false;
         }
@@ -79,7 +84,6 @@ int main() {
 
         if (fpsClk.getElapsedTime().asMilliseconds() >= 1000) {
             fpsClk.restart();
-            
             std::cout << fps << std::endl;
             fps = 0;
         }
@@ -89,29 +93,62 @@ int main() {
     return 0;
 }
 
-float pos(float Xmax, float omega, float phi, float t) {
-    return Xmax * cosf((omega * t + phi) * PI / 180.0);
+float pos(struct Engine* e) {
+    float t = e->clock.getElapsedTime().asMilliseconds() / 1000.f;
+    return e->Xmax * cosf(e->omega * t + e->phi);
 }
 
-float vel(float Xmax, float omega, float phi, float t) {
-    return - omega * Xmax * sinf((omega * t + phi) * PI / 180.0);
+float vel(struct Engine* e) {
+    float t = e->clock.getElapsedTime().asMilliseconds() / 1000.f;
+    return - e->omega * e->Xmax * sinf(e->omega * t + e->phi);
 }
 
-float acc(float Xmax, float omega, float phi, float t) {
-    return omega * omega * Xmax * cosf((omega * t + phi) * PI / 180.0);
+float acc(struct Engine* e) {
+    float t = e->clock.getElapsedTime().asMilliseconds() / 1000.f;
+    return e->omega * e->omega * e->Xmax * cosf(e->omega * t + e->phi);
 }
 
-float calcOmega(float k, float mass) {
-    return sqrtf(k / mass);
+float calcOmega(struct Engine* e) {
+    return sqrtf(e->k / e->mass);
 }
 
-float calcPeriod(float k, float mass) {
-    return 2 * PI * sqrtf(mass / k);
+float calcPeriod(struct Engine* e) {
+    return 2 * PI * sqrtf(e->mass / e->k);
 }
 
-void render(sf::RenderWindow* window, std::vector<sf::Drawable*>* drawables) {
+void setPeriod(struct Engine* e, float period) {
+    e->period = period;
+    e->omega = 2 * PI / period;
+    e->k = e->omega * e->omega * e->mass;
+}
+
+void initSpring(std::vector<sf::RectangleShape*>* drawables) {
+    sf::RectangleShape* ceiling = new sf::RectangleShape(sf::Vector2f(325, 23));
+    ceiling->setOrigin(325/2-~(325&0x01), 23/2-~(23&0x01));
+    ceiling->setFillColor(sf::Color(255, 247, 238, 220));
+    ceiling->setPosition(997, 63);
+    drawables->push_back(ceiling);
+
+    sf::Texture* texture = new sf::Texture;
+    texture->loadFromFile("spring.png");
+    sf::RectangleShape* spring = new sf::RectangleShape(sf::Vector2f(94, 481));
+    spring->setTexture(texture);
+    spring->setOrigin(94/2-~(94&0x01), 0);
+    spring->setPosition(997, 72);
+    drawables->push_back(spring);
+
+    sf::RectangleShape* box = new sf::RectangleShape(sf::Vector2f(134, 134));
+    box->setFillColor(sf::Color(0, 0, 0));
+    box->setOutlineThickness(5);
+    box->setOutlineColor(sf::Color(255, 247, 238, 220));
+    box->setOrigin(134/2-~(134&0x01), 134/2-~(134&0x01));
+    box->setPosition(997, 625);
+    drawables->push_back(box);
+}
+
+void render(sf::RenderWindow* window, std::vector<sf::RectangleShape*>* drawables) {
     window->clear();
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < drawables->size(); i++) {
         window->draw(*(*drawables)[i]);
     }
 
