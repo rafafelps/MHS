@@ -21,6 +21,7 @@ struct Graphic {
     std::vector<sf::RectangleShape*> drawables;
     std::list<sf::CircleShape*> graph;
     std::vector<sf::Text*> hud;
+    sf::Font cascadia;
 };
 
 float pos(struct Engine* e);
@@ -33,9 +34,10 @@ void setPeriod(struct Engine* e, float period);
 void initEngine(struct Engine* e);
 void initSpring(struct Graphic* g);
 void initAxis(struct Graphic* g);
-void initHud(struct Graphic* g);
+void initHud(struct Engine* e, struct Graphic* g);
 void shiftGraph(struct Graphic* g);
 void graphPoint(struct Graphic* g, float y);
+void updateValues(struct Engine* e, struct Graphic* g);
 void render(sf::RenderWindow* window, struct Graphic* g);
 
 int main() {
@@ -50,7 +52,7 @@ int main() {
     initEngine(&e);
     initSpring(&g);
     initAxis(&g);
-    initHud(&g);
+    initHud(&e, &g);
 
     double dt = 1.f/60.f; // Modify this to change physics rate.
     double accumulator = 0.f;
@@ -78,13 +80,7 @@ int main() {
 
             // TODO: adionar barras de tempo
 
-            // xₘ
-            // ω
-            // ϕ
-            std::string s = std::to_string(x(&e));
-            g.hud[0]->setString(s.substr(0, s.find('.')+3));
-            g.hud[0]->setPosition(840, 350 - pos(&e));
-
+            updateValues(&e, &g);
             graphPoint(&g, g.drawables[2]->getPosition().y);
 
             accumulator = 0;
@@ -215,18 +211,124 @@ void initAxis(struct Graphic* g) {
     g->drawables.push_back(bar);
 }
 
-void initHud(struct Graphic* g) {
-    sf::Font* cascadia = new sf::Font;
-    cascadia->loadFromFile("CascadiaCode-Regular.otf");
+void initHud(struct Engine* e, struct Graphic* g) {
+    g->cascadia.loadFromFile("CascadiaCode-Regular.otf");
 
     sf::Text* bar = new sf::Text;
-    bar->setFont(*cascadia);
+    bar->setFont(g->cascadia);
     bar->setFillColor(sf::Color::White);
     bar->setCharacterSize(20);
     bar->setPosition(840, 365);
     g->hud.push_back(bar);
 
-    // TODO: adionar o resto do layout
+    std::string s = std::to_string(e->Xmax);
+    s = s.substr(0, s.find('.') + 3);
+
+    sf::Text* Xm = new sf::Text;
+    Xm->setFont(g->cascadia);
+    Xm->setFillColor(sf::Color::White);
+    Xm->setCharacterSize(20);
+    Xm->setPosition(40, 620);
+    Xm->setString("xmax: " + s + " m");
+    g->hud.push_back(Xm);
+
+    s = std::to_string(e->omega);
+    s = s.substr(0, s.find('.') + 3);
+
+    sf::Text* omega = new sf::Text;
+    omega->setFont(g->cascadia);
+    omega->setFillColor(sf::Color::White);
+    omega->setCharacterSize(20);
+    omega->setPosition(40, 660);
+    omega->setString("w: " + s + " rad/s");
+    g->hud.push_back(omega);
+
+    s = std::to_string(e->mass);
+    s = s.substr(0, s.find('.') + 3);
+
+    sf::Text* m = new sf::Text;
+    m->setFont(g->cascadia);
+    m->setFillColor(sf::Color::White);
+    m->setCharacterSize(20);
+    m->setPosition(240, 620);
+    m->setString("m: " + s + " kg");
+    g->hud.push_back(m);
+
+    s = std::to_string(e->k);
+    s = s.substr(0, s.find('.') + 3);
+
+    sf::Text* k = new sf::Text;
+    k->setFont(g->cascadia);
+    k->setFillColor(sf::Color::White);
+    k->setCharacterSize(20);
+    k->setPosition(240, 660);
+    k->setString("k: " + s + " N/m");
+    g->hud.push_back(k);
+
+    s = std::to_string(e->omega / (2 * PI));
+    s = s.substr(0, s.find('.') + 3);
+
+    sf::Text* f = new sf::Text;
+    f->setFont(g->cascadia);
+    f->setFillColor(sf::Color::White);
+    f->setCharacterSize(20);
+    f->setPosition(420, 620);
+    f->setString("f: " + s + " Hz");
+    g->hud.push_back(f);
+
+    s = std::to_string(e->phi);
+    s = s.substr(0, s.find('.') + 3);
+
+    sf::Text* phi = new sf::Text;
+    phi->setFont(g->cascadia);
+    phi->setFillColor(sf::Color::White);
+    phi->setCharacterSize(20);
+    phi->setPosition(420, 660);
+    phi->setString("Phi: " + s + " rad");
+    g->hud.push_back(phi);
+
+    s = std::to_string((2 * PI) / e->omega);
+    s = s.substr(0, s.find('.') + 3);
+
+    sf::Text* p = new sf::Text;
+    p->setFont(g->cascadia);
+    p->setFillColor(sf::Color::White);
+    p->setCharacterSize(20);
+    p->setPosition(630, 620);
+    p->setString("T: " + s + " s");
+    g->hud.push_back(p);
+
+    sf::Text* clk = new sf::Text;
+    clk->setFont(g->cascadia);
+    clk->setFillColor(sf::Color::White);
+    clk->setCharacterSize(20);
+    clk->setPosition(630, 660);
+    clk->setString("Time:");
+    g->hud.push_back(clk);
+
+    sf::Text* xt = new sf::Text;
+    xt->setFont(g->cascadia);
+    xt->setFillColor(sf::Color::White);
+    xt->setCharacterSize(20);
+    xt->setPosition(40, 40);
+    xt->setString("x(t):");
+    g->hud.push_back(xt);
+
+    sf::Text* vt = new sf::Text;
+    vt->setFont(g->cascadia);
+    vt->setFillColor(sf::Color::White);
+    vt->setCharacterSize(20);
+    vt->setPosition(300, 40);
+    vt->setString("v(t):");
+    g->hud.push_back(vt);
+
+    sf::Text* at = new sf::Text;
+    at->setFont(g->cascadia);
+    at->setFillColor(sf::Color::White);
+    at->setCharacterSize(20);
+    at->setPosition(560, 40);
+    at->setString("a(t):");
+    g->hud.push_back(at);
 }
 
 void shiftGraph(struct Graphic* g) {
@@ -245,6 +347,38 @@ void graphPoint(struct Graphic* g, float y) {
     p->setFillColor(sf::Color(0, 148, 255));
     p->setPosition(800, y);
     g->graph.push_back(p);
+}
+
+void updateValues(struct Engine* e, struct Graphic* g) {
+    std::string s = std::to_string(x(e));
+    s = s.substr(0, s.find('.') + 3);
+    g->hud[0]->setString(s);
+    g->hud[0]->setPosition(840, 350 - pos(e));
+    g->hud[9]->setString("x(t): " + s + " m");
+
+    unsigned int total = e->clock.getElapsedTime().asSeconds();
+    unsigned int hr = total / 3600;
+    total -= hr * 3600;
+    unsigned int min = total / 60;
+    total -= min * 60;
+    unsigned int sec = total;
+
+    s = "Time: ";
+    if (hr < 10) { s = s + "0"; }
+    s = s + std::to_string(hr) + ":";
+    if (min < 10) { s = s + "0"; }
+    s = s + std::to_string(min) + ":";
+    if (sec < 10) { s = s + "0"; }
+    s = s + std::to_string(sec);
+    g->hud[8]->setString(s);
+
+    s = std::to_string(vel(e));
+    s = s.substr(0, s.find('.') + 3);
+    g->hud[10]->setString("v(t): " + s + " m/s");
+
+    s = std::to_string(acc(e));
+    s = s.substr(0, s.find('.') + 3);
+    g->hud[11]->setString("a(t): " + s + " m/s^2");
 }
 
 void render(sf::RenderWindow* window, struct Graphic* g) {
