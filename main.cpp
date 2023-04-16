@@ -23,6 +23,7 @@ float acc(struct Engine* e);
 float calcOmega(struct Engine* e);
 float calcPeriod(struct Engine* e);
 void setPeriod(struct Engine* e, float period);
+void initEngine(struct Engine* e);
 void initSpring(std::vector<sf::RectangleShape*>* drawables);
 void initAxis(std::vector<sf::RectangleShape*>* drawables);
 void shiftGraph(std::list<sf::CircleShape*>* graph);
@@ -36,14 +37,9 @@ int main() {
     sf::RenderWindow window(sf::VideoMode(width, height), "Simple Harmonic Motion");
     std::vector<sf::RectangleShape*> drawables;
     std::list<sf::CircleShape*> graph;
-
     struct Engine e;
-    e.mass = 1;
-    e.k = 1;
-    setPeriod(&e, 0.5);
-    e.Xmax = 4;
-    e.phi = 0;
 
+    initEngine(&e);
     initSpring(&drawables);
     initAxis(&drawables);
 
@@ -66,7 +62,6 @@ int main() {
         if (accumulator >= dt) {
             // Physics and stuff
 
-            //drawables[1]->setSize(sf::Vector2f(94, 216 + pos(&e)));
             //e.clock.restart();
             drawables[1]->setSize(sf::Vector2f(drawables[1]->getSize().x, 216 - pos(&e)));
             drawables[2]->setPosition(drawables[2]->getPosition().x, 360 - pos(&e));
@@ -122,6 +117,14 @@ void setPeriod(struct Engine* e, float period) {
     e->period = period;
     e->omega = 2 * PI / period;
     e->k = e->omega * e->omega * e->mass;
+}
+
+void initEngine(struct Engine* e) {
+    e->k = 1;
+    e->mass = 1;
+    e->Xmax = 1;
+    e->phi = 0;
+    setPeriod(e, 1);
 }
 
 void initSpring(std::vector<sf::RectangleShape*>* drawables) {
