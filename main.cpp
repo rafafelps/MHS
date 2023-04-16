@@ -65,6 +65,7 @@ int main() {
             //e.clock.restart();
             drawables[1]->setSize(sf::Vector2f(drawables[1]->getSize().x, 216 - pos(&e)));
             drawables[2]->setPosition(drawables[2]->getPosition().x, 360 - pos(&e));
+            drawables[9]->setPosition(drawables[9]->getPosition().x, 362 - pos(&e));
             
             graphPoint(&graph, drawables[2]->getPosition().y);
 
@@ -183,6 +184,12 @@ void initAxis(std::vector<sf::RectangleShape*>* drawables) {
     rgtArrow->setPosition(799, 81);
     rgtArrow->rotate(-45);
     drawables->push_back(rgtArrow);
+
+    sf::RectangleShape* bar = new sf::RectangleShape(sf::Vector2f(40, 3));
+    bar->setFillColor(sf::Color(220, 213, 205));
+    bar->setOrigin(19, 1);
+    bar->setPosition(801, 362);
+    drawables->push_back(bar);
 }
 
 void shiftGraph(std::list<sf::CircleShape*>* graph) {
