@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 #include <list>
+#include "include/imgui.h"
+#include "include/imgui-SFML.h"
 
 #define PI 3.14159265
 
@@ -45,6 +47,8 @@ int main() {
     int width = 1280;
     int height = int(width / aspect_ratio);
     sf::RenderWindow window(sf::VideoMode(width, height), "Simple Harmonic Motion");
+
+    ImGui::SFML::Init(window);
     
     struct Engine e;
     struct Graphic g;
@@ -57,6 +61,7 @@ int main() {
     double dt = 1.f/60.f; // Modify this to change physics rate.
     double accumulator = 0.f;
     sf::Clock clock;
+    sf::Clock clock2;
     sf::Clock fpsClk;
     bool drawn = false;
     unsigned int fps = 0;
@@ -64,9 +69,15 @@ int main() {
     while (window.isOpen()) {
         sf::Event event;
         while (window.pollEvent(event)) {
+            ImGui::SFML::ProcessEvent(window, event);
             if (event.type == sf::Event::Closed)
                 window.close();
         }
+            ImGui::SFML::Update(window, clock2.restart());
+            ImGui::Begin("Hello, world!");
+            ImGui::Button("Look at this pretty button");
+            ImGui::End();
+            ImGui::EndFrame();
 
         accumulator += clock.getElapsedTime().asMicroseconds() / 1000000.f;
         clock.restart();
@@ -100,7 +111,7 @@ int main() {
             fps = 0;
         }
     }
-
+    ImGui::SFML::Shutdown();
 
     return 0;
 }
@@ -411,6 +422,6 @@ void render(sf::RenderWindow* window, struct Graphic* g) {
     for (int i = 0; i < lim; i++) {
         window->draw(*(g->hud)[i]);
     }
-
+    ImGui::SFML::Render(*window);
     window->display();
 }
