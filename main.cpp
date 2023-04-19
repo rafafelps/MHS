@@ -6,6 +6,7 @@
 #include <list>
 #include "include/imgui.h"
 #include "include/imgui-SFML.h"
+#include "Chronometer.hpp"
 
 #define PI 3.14159265
 
@@ -16,7 +17,8 @@ struct Engine {
     float Xmax;
     float period;
     float phi;
-    sf::Clock clock;
+    sftools::Chronometer clock;
+    float graphSpeed;
 };
 
 struct Graphic {
@@ -32,12 +34,12 @@ float vel(struct Engine* e);
 float acc(struct Engine* e);
 float calcOmega(struct Engine* e);
 float calcPeriod(struct Engine* e);
-void setPeriod(struct Engine* e, float period);
+void setPeriod(struct Engine* e, struct Graphic* g, float period);
 void initEngine(struct Engine* e);
 void initSpring(struct Graphic* g);
 void initAxis(struct Graphic* g);
 void initHud(struct Engine* e, struct Graphic* g);
-void shiftGraph(struct Graphic* g);
+void shiftGraph(struct Engine* e, struct Graphic* g);
 void graphPoint(struct Graphic* g, float y);
 void updateValues(struct Engine* e, struct Graphic* g);
 void render(sf::RenderWindow* window, struct Graphic* g);
@@ -49,6 +51,11 @@ int main() {
     sf::RenderWindow window(sf::VideoMode(width, height), "Simple Harmonic Motion");
 
     ImGui::SFML::Init(window);
+    ImGuiWindowFlags window_flags = 0;
+    window_flags |= ImGuiWindowFlags_NoScrollbar;
+    window_flags |= ImGuiWindowFlags_NoMove;
+    window_flags |= ImGuiWindowFlags_NoResize;
+    window_flags |= ImGuiWindowFlags_NoCollapse;
     
     struct Engine e;
     struct Graphic g;
@@ -61,48 +68,103 @@ int main() {
     double dt = 1.f/60.f; // Modify this to change physics rate.
     double accumulator = 0.f;
     sf::Clock clock;
-    sf::Clock clock2;
+    sf::Clock clockImGui;
     sf::Clock fpsClk;
-    bool drawn = false;
     unsigned int fps = 0;
+
+    bool pause = true;
+    float period = e.period;
+    float omega = e.omega;
+    float mass = e.mass;
+    float k = e.k;
+    float f = e.omega / (2 * PI);
+    float simTime = e.clock.getElapsedTime().asSeconds();
 
     while (window.isOpen()) {
         sf::Event event;
         while (window.pollEvent(event)) {
             ImGui::SFML::ProcessEvent(window, event);
+
             if (event.type == sf::Event::Closed)
                 window.close();
         }
-            ImGui::SFML::Update(window, clock2.restart());
-            ImGui::Begin("Hello, world!");
-            ImGui::Button("Look at this pretty button");
-            ImGui::End();
-            ImGui::EndFrame();
+
+        ImGui::SFML::Update(window, clockImGui.restart());
+        ImGui::Begin("options", NULL, window_flags);
+        ImGui::Checkbox("pause", &pause);
+        ImGui::Text("<- -             + ->");
+        ImGui::DragFloat("x max", &e.Xmax, 0.1f, 0.f, 1000.f); // v
+        ImGui::DragFloat("w", &omega, 0.1f, 0.f, 1000.f); // v
+        ImGui::DragFloat("mass", &mass, 0.1f, 0.f, 1000.f); //
+        ImGui::DragFloat("k", &k, 0.1f, 0.f, 1000000.f);
+        ImGui::DragFloat("f", &f, 0.1f, 0.f, 1000.f);
+        ImGui::DragFloat("phi", &e.phi, 0.1f, - 2 * PI, 2 * PI);
+        ImGui::DragFloat("period", &period, 0.1f, 0.f, 1000.f);
+        ImGui::DragFloat("time", &simTime, 0.1f, 0.f, 1000.f);
+        ImGui::End();
+        ImGui::EndFrame();
 
         accumulator += clock.getElapsedTime().asMicroseconds() / 1000000.f;
         clock.restart();
         if (accumulator >= dt) {
             // Physics and stuff
+            if (period != e.period) {
+                setPeriod(&e, &g, period);
+                omega = e.omega;
+                k = e.k;
+                f = 1 / period;
+            } else if (omega != e.omega) {
+                setPeriod(&e, &g, 2 * PI / omega);
+                k = e.k;
+                period = e.period;
+                f = 1 / period;
+            } else if (mass != e.mass) {
+                if (mass) {
+                    e.mass = mass;
+                    setPeriod(&e, &g, 2 * PI / calcOmega(&e));
+                    omega = e.omega;
+                    period = e.period;
+                    f = 1 / period;
+                } else { pause = true; }
+            } else if (k != e.k) {
+                e.k = k;
+                setPeriod(&e, &g, 2 * PI / calcOmega(&e));
+                omega = e.omega;
+                period = e.period;
+                f = 1 / e.period;
+            } else if ( 1 / f != e.period) {
+                setPeriod(&e, &g, 1 / f);
+                omega = e.omega;
+                period = e.period;
+                k = e.k;
+            } else if (!e.clock.isRunning()) {
+                float curTime = e.clock.getElapsedTime().asSeconds();
+                if (simTime != curTime) {
+                    e.clock.add(sf::seconds(simTime - curTime));
+                }
+            }
+            simTime = e.clock.getElapsedTime().asSeconds();
 
-            //e.clock.restart();
+            updateValues(&e, &g);
             g.drawables[1]->setSize(sf::Vector2f(g.drawables[1]->getSize().x, 216 - pos(&e)));
             g.drawables[2]->setPosition(g.drawables[2]->getPosition().x, 360 - pos(&e));
             g.drawables[9]->setPosition(g.drawables[9]->getPosition().x, 362 - pos(&e));
 
-            // TODO: adionar barras de tempo
-
-            updateValues(&e, &g);
-            graphPoint(&g, g.drawables[2]->getPosition().y);
+            if (!pause) {
+                e.clock.resume();
+                if (e.omega != 0) {
+                    graphPoint(&g, g.drawables[2]->getPosition().y);
+                    shiftGraph(&e, &g);
+                }
+            }
+            else { e.clock.pause(); }
 
             accumulator = 0;
-            drawn = false;
-        }
 
-        if (!drawn) {
             fps++;
             render(&window, &g);
-            shiftGraph(&g);
-            drawn = true;
+            ImGui::SFML::Render(window);
+            window.display();
         }
 
         if (fpsClk.getElapsedTime().asMilliseconds() >= 1000) {
@@ -144,18 +206,22 @@ float calcPeriod(struct Engine* e) {
     return 2 * PI * sqrtf(e->mass / e->k);
 }
 
-void setPeriod(struct Engine* e, float period) {
+void setPeriod(struct Engine* e, struct Graphic* g, float period) {
     e->period = period;
     e->omega = 2 * PI / period;
     e->k = e->omega * e->omega * e->mass;
+    e->graphSpeed = -5.f / e->period;
 }
 
 void initEngine(struct Engine* e) {
     e->k = 1;
     e->mass = 1;
-    e->Xmax = 50;
-    e->phi = -PI/2;
-    setPeriod(e, 1);
+    e->Xmax = 1;
+    e->phi = 0;
+    e->period = 1;
+    e->omega = 2 * PI / e->period;
+    e->k = e->omega * e->omega * e->mass;
+    e->graphSpeed = -5;
 }
 
 void initSpring(struct Graphic* g) {
@@ -240,7 +306,7 @@ void initHud(struct Engine* e, struct Graphic* g) {
     Xm->setFillColor(sf::Color::White);
     Xm->setCharacterSize(20);
     Xm->setPosition(40, 620);
-    Xm->setString("xmax: " + s + " m");
+    Xm->setString("x max: " + s + " m");
     g->hud.push_back(Xm);
 
     s = std::to_string(e->omega);
@@ -262,7 +328,7 @@ void initHud(struct Engine* e, struct Graphic* g) {
     m->setFillColor(sf::Color::White);
     m->setCharacterSize(20);
     m->setPosition(240, 620);
-    m->setString("m: " + s + " kg");
+    m->setString("m: " + s + " Kg");
     g->hud.push_back(m);
 
     s = std::to_string(e->k);
@@ -295,7 +361,7 @@ void initHud(struct Engine* e, struct Graphic* g) {
     phi->setFillColor(sf::Color::White);
     phi->setCharacterSize(20);
     phi->setPosition(420, 660);
-    phi->setString("Phi: " + s + " rad");
+    phi->setString("phi: " + s + " rad");
     g->hud.push_back(phi);
 
     s = std::to_string((2 * PI) / e->omega);
@@ -314,7 +380,7 @@ void initHud(struct Engine* e, struct Graphic* g) {
     clk->setFillColor(sf::Color::White);
     clk->setCharacterSize(20);
     clk->setPosition(630, 660);
-    clk->setString("Time:");
+    clk->setString("time:");
     g->hud.push_back(clk);
 
     sf::Text* xt = new sf::Text;
@@ -342,10 +408,10 @@ void initHud(struct Engine* e, struct Graphic* g) {
     g->hud.push_back(at);
 }
 
-void shiftGraph(struct Graphic* g) {
+void shiftGraph(struct Engine* e, struct Graphic* g) {
     int lim = g->graph.size();
     for (std::list<sf::CircleShape*>::iterator it = g->graph.begin(); it != g->graph.end(); it++) {
-        (*it)->move(-5, 0); // -2
+        (*it)->move(e->graphSpeed, 0); // -2
         if ((*it)->getPosition().x < -5) {
             delete *it;
             g->graph.erase(it);
@@ -367,6 +433,34 @@ void updateValues(struct Engine* e, struct Graphic* g) {
     g->hud[0]->setPosition(860, 350 - pos(e));
     g->hud[9]->setString("x(t): " + s + " m");
 
+    s = std::to_string(e->Xmax);
+    s = s.substr(0, s.find('.') + 3);
+    g->hud[1]->setString("x max: " + s + " m");
+
+    s = std::to_string(e->omega);
+    s = s.substr(0, s.find('.') + 3);
+    g->hud[2]->setString("w: " + s + " rad/s");
+
+    s = std::to_string(e->mass);
+    s = s.substr(0, s.find('.') + 3);
+    g->hud[3]->setString("m: " + s + " Kg");
+
+    s = std::to_string(e->k);
+    s = s.substr(0, s.find('.') + 3);
+    g->hud[4]->setString("k: " + s + " N/m");
+
+    s = std::to_string(e->omega / (2 * PI));
+    s = s.substr(0, s.find('.') + 3);
+    g->hud[5]->setString("f: " + s + " Hz");
+
+    s = std::to_string(e->phi);
+    s = s.substr(0, s.find('.') + 3);
+    g->hud[6]->setString("phi: " + s + " rad");
+
+    s = std::to_string((2 * PI) / e->omega);
+    s = s.substr(0, s.find('.') + 3);
+    g->hud[7]->setString("T: " + s + " s");
+
     unsigned int total = e->clock.getElapsedTime().asSeconds();
     unsigned int hr = total / 3600;
     total -= hr * 3600;
@@ -374,7 +468,7 @@ void updateValues(struct Engine* e, struct Graphic* g) {
     total -= min * 60;
     unsigned int sec = total;
 
-    s = "Time: ";
+    s = "time: ";
     if (hr < 10) { s = s + "0"; }
     s = s + std::to_string(hr) + ":";
     if (min < 10) { s = s + "0"; }
@@ -422,6 +516,4 @@ void render(sf::RenderWindow* window, struct Graphic* g) {
     for (int i = 0; i < lim; i++) {
         window->draw(*(g->hud)[i]);
     }
-    ImGui::SFML::Render(*window);
-    window->display();
 }
